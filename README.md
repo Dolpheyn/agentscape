@@ -6,6 +6,12 @@ The **wizard** skill — make your agent your wizard for a Gas City that is a be
 
 The city IS the being, not a host for it. Propagation is the mechanism of care. The moment of expression is the core. agentscape is the hand that shapes the being over time.
 
+## The evolution from gas-cityscape
+
+agentscape is the **evolution of `gas-cityscape`** — the next version. gas-cityscape is the onboarder: it crafts a Gas City that runs a *project*. agentscape generalizes that from *project* to *being*: a wizard that bootstraps a Gas City that is a being (city + wiki + gbrain) and keeps scaping it — orienting, inspecting structural health, and working with the human to act.
+
+The two ship alongside each other for now. agentscape is the north star — it supersedes gas-cityscape once verified that it covers everything gas-cityscape already is, with better design principles shaping the wizard's behaviour. gas-cityscape lives in [`kotak-cloud/skills`](https://github.com/kotak-cloud/skills).
+
 ## The two modes
 
 | Mode | Sub-skill | When |

@@ -76,6 +76,7 @@ Both sub-skills draw on the same references and assets. The craft is: city confi
 - `reference/wiki-principles.md` — the being's memory organized by care.
 - `reference/gbrain-integration.md` — wiring the retrieval brain.
 - `reference/pipeline-build-spec.md` — the propagation nervous system.
+- `reference/timeline-beats.md` — the brewing-beat order (the Scape timeline's writer).
 - `reference/model-welfare.md` — the welfare architecture.
 - `reference/orient-skill.md` — writing the city's orient skill.
 - `reference/pitfalls.md` — the ways city craft commonly fails.

@@ -1,0 +1,7 @@
+# orders/beat-scribe.toml
+[order]
+description = "Beat scribe: pull the event batch, brew or commit the current beat"
+exec = "commands/beat-scribe.sh"
+trigger = "cooldown"
+interval = "5m"
+timeout = "60s"

@@ -1,0 +1,63 @@
+description = """
+Blameless postmortem for a failed landing.
+
+Nobody gets blamed. The postmortem reproduces the failure, root-causes it,
+records the finding in the context base, and amends the city constitution if
+the failure points at a rule that should change. Run it as a formula or
+manually; the mayor owns the constitution amendment.
+"""
+formula = "postmortem"
+version = 1
+contract = "graph.v2"
+target_required = true
+
+[catalog]
+name = "postmortem"
+description = "Run a blameless postmortem after a red landing and amend the constitution as needed."
+
+[metadata.gc.methodology]
+implementation_strategy = "single"
+interaction_modes = ["interactive", "autonomous"]
+
+[[steps]]
+id = "reproduce"
+title = "Reproduce and scope the failure"
+metadata = { "gc.run_target" = "gc.run-operator" }
+description = """
+Reproduce the failure from the bead trail and the landing. Scope it: what
+landed, what went red, what the blast radius was. Record the reproduction
+steps in the bead — evidence, not vibes.
+"""
+
+[[steps]]
+id = "root-cause"
+title = "Root-cause without blame"
+needs = ["reproduce"]
+metadata = { "gc.run_target" = "gc.run-operator" }
+description = """
+Find the root cause by tracing the failure to its source. Blameless framing:
+name the conditions and the process gaps, never the person or the agent. If
+the cause is a missing or wrong rule, say what rule would have caught it.
+"""
+
+[[steps]]
+id = "record"
+title = "Record the finding in the context base"
+needs = ["root-cause"]
+metadata = { "gc.run_target" = "gc.run-operator" }
+description = """
+Write the finding to `context/current/` (or `context/archive/` once settled):
+what failed, why, what changed to prevent it. Reference the bead ids — the
+record is the trail, never falsified.
+"""
+
+[[steps]]
+id = "amend"
+title = "Amend the constitution if a rule should change"
+needs = ["record"]
+metadata = { "gc.run_target" = "gc.run-operator" }
+description = """
+If the failure points at a rule that should change, amend
+`context/current/constitution.md`: update the rules, append the amendment row
+(date, change, produced by this postmortem). No amendment without a finding.
+"""

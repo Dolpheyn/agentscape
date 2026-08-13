@@ -1,0 +1,7 @@
+# orders/scape-scribe.toml
+[order]
+description = "Scape scribe: pull the event batch, brew or commit the current beat"
+exec = "commands/scape-scribe.sh"
+trigger = "cooldown"
+interval = "5m"
+timeout = "60s"

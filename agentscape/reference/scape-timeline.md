@@ -1,4 +1,4 @@
-# Timeline beats — the brewing-beat order
+# Scape timeline — the brewing-beat order
 
 The concrete implementation of the Scape timeline's **brewing beat**: a timeline
 item that accumulates for ~30 minutes before it commits, so the human can watch
@@ -8,6 +8,10 @@ This is the **what to build** — the exact files, their contents, and the wirin
 The design rationale is in `companion-nervous-system.md` (propagation is care)
 and the Scape wayfinder's `WRAPPED-WRITING.md` (the handoff voice). This doc is
 the buildable spec.
+
+Everything scape-related carries the **`scape-` prefix** in the city: the agent
+is `scape-scribe`, the order is `scape-scribe`, the state machine is
+`scape-scribe.py`, the timeline data lives under `twin/scape/`.
 
 ## The shape in one line
 
@@ -29,18 +33,18 @@ starts brewing.
   city's own vocabulary.
 - **Cooldown, not cron.** The order is `trigger = "cooldown"`, `interval = "5m"`,
   exactly like the observer-wake order. It is idempotent: if a wake is missed or
-  overlaps, the `last_seq` watermark prevents double-processing.
+  overlaps, the `last_pulled_at` watermark prevents double-processing.
 
 ## Files to create
 
 ```
-orders/beat-scribe.toml          # the 5-minute cooldown order
-commands/beat-scribe.sh          # the trigger: pull events, decide, nudge
-commands/beat-scribe.py          # deterministic state machine (from assets/beat-scribe.template.py)
+orders/scape-scribe.toml          # the 5-minute cooldown order
+commands/scape-scribe.sh          # the trigger: pull events, decide, nudge
+commands/scape-scribe.py          # deterministic state machine (from assets/scape-scribe.template.py)
 
-twin/timeline/brewing.json       # the current brewing beat + last_seq + started_at
-twin/timeline/beats.json         # committed beats (append-only)
-twin/timeline/README.md          # what the timeline is, how to read it
+twin/scape/brewing.json           # the current brewing beat + last_pulled_at + started_at
+twin/scape/beats.json             # committed beats (append-only)
+twin/scape/README.md              # what the timeline is, how to read it
 ```
 
 Plus a **scribe agent** (a seat) whose prompt carries the writing rules. The
@@ -49,50 +53,50 @@ scribe is the "agent on the side" that produces the timeline items.
 ## The order
 
 ```toml
-# orders/beat-scribe.toml
+# orders/scape-scribe.toml
 [order]
-description = "Beat scribe: pull the event batch, brew or commit the current beat"
-exec = "commands/beat-scribe.sh"
+description = "Scape scribe: pull the event batch, brew or commit the current beat"
+exec = "commands/scape-scribe.sh"
 trigger = "cooldown"
 interval = "5m"
 timeout = "60s"
 ```
 
-## The trigger script (`commands/beat-scribe.sh`)
+## The trigger script (`commands/scape-scribe.sh`)
 
 ```bash
 #!/usr/bin/env bash
-# beat-scribe.sh — the 5-minute brewing-beat wake.
+# scape-scribe.sh — the 5-minute brewing-beat wake.
 # Pulls the event batch since the last watermark, decides whether the current
 # beat commits (>=30min) or keeps brewing, and nudges the scribe to write or
 # update the beat's copy. No-op when there is nothing new.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERDICT=$(python3 commands/beat-scribe.py 2>/dev/null || echo '{"action":"error"}')
+VERDICT=$(python3 commands/scape-scribe.py 2>/dev/null || echo '{"action":"error"}')
 
 if echo "$VERDICT" | grep -q '"action": "commit"'; then
   # The current beat has brewed long enough — commit it, start a new one.
-  gc session nudge scribe "COMMIT: the beat has brewed 30 minutes. Finalize its copy in the handoff voice (first-person 'We', meaning over mechanics), then close it as a committed timeline item. A new beat is now brewing." --delivery wait-idle 2>/dev/null \
-    || gc session wake scribe 2>/dev/null || true
-  echo "beat-scribe: committed + new beat brewing"
+  gc session nudge scape-scribe "COMMIT: the beat has brewed 30 minutes. Finalize its copy in the handoff voice (first-person 'We', meaning over mechanics), then close it as a committed timeline item. A new beat is now brewing." --delivery wait-idle 2>/dev/null \
+    || gc session wake scape-scribe 2>/dev/null || true
+  echo "scape-scribe: committed + new beat brewing"
 elif echo "$VERDICT" | grep -q '"action": "update"'; then
   # New meaningful events landed in the current beat's window — update its copy.
   BATCH=$(echo "$VERDICT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('batch',''))")
-  gc session nudge scribe "UPDATE: new events landed in the brewing beat. Read the batch ($BATCH). If it extends the current thread, revise the beat's sentence to summarise both. If it is a new thread, note it as a second sentence. Keep the handoff voice." --delivery wait-idle 2>/dev/null \
-    || gc session wake scribe 2>/dev/null || true
-  echo "beat-scribe: update requested"
+  gc session nudge scape-scribe "UPDATE: new events landed in the brewing beat. Read the batch ($BATCH). If it extends the current thread, revise the beat's sentence to summarise both. If it is a new thread, note it as a second sentence. Keep the handoff voice." --delivery wait-idle 2>/dev/null \
+    || gc session wake scape-scribe 2>/dev/null || true
+  echo "scape-scribe: update requested"
 else
   # Nothing new, or the beat is still young with no meaningful events.
-  echo "beat-scribe: no-op"
+  echo "scape-scribe: no-op"
 fi
 ```
 
-## The state machine (`commands/beat-scribe.py`)
+## The state machine (`commands/scape-scribe.py`)
 
-The deterministic heart. It reads `twin/timeline/brewing.json`, pulls events
-since `last_seq`, and decides the action. Ship it from
-`assets/beat-scribe.template.py` and adapt the CONFIG block (the `/v0` base URL
+The deterministic heart. It reads `twin/scape/brewing.json`, pulls events
+since `last_pulled_at`, and decides the action. Ship it from
+`assets/scape-scribe.template.py` and adapt the CONFIG block (the `/v0` base URL
 and the commit window).
 
 **State (`brewing.json`):**
@@ -100,7 +104,7 @@ and the commit window).
 ```json
 {
   "started_at": "2026-08-13T17:00:00Z",
-  "last_seq": 127770,
+  "last_pulled_at": "2026-08-13T17:05:00Z",
   "events": [],
   "copy": "",
   "thread": ""
@@ -109,15 +113,16 @@ and the commit window).
 
 **The decision:**
 
-1. Pull events with `after=<last_seq>` (incremental — the API supports it).
+1. Pull events with `since=<duration since last_pulled_at>` (the `/v0` API
+   honors `since` as a duration; `after=<seq>` is ignored).
 2. If no new events, and the beat is younger than the commit window → **no-op**.
 3. If the beat is older than the commit window (30 min) → **commit** (finalize
    the copy, append to `beats.json`, reset `brewing.json` with a new `started_at`
-   and the current `last_seq`).
+   and the current `last_pulled_at`).
 4. Else, if the new batch has meaningful events (attention signals, human
    session activity, a new thread) → **update** (append the batch to the beat's
-   `events`, advance `last_seq`, nudge the scribe).
-5. Else → **no-op** (advance `last_seq` only, so we never re-pull the same
+   `events`, advance `last_pulled_at`, nudge the scribe).
+5. Else → **no-op** (advance `last_pulled_at` only, so we never re-pull the same
    events).
 
 **Meaningful events** (what makes a batch worth a copy update):
@@ -144,13 +149,13 @@ copy. Its prompt carries the writing rules from `WRAPPED-WRITING.md`:
 - **Short sentences.** One idea per sentence. ≤20 words where possible.
 
 The scribe reads the batch (the raw events), not surface counts. It writes the
-beat's `copy` into `brewing.json`. On commit, it finalizes and the beat becomes
-a permanent timeline item.
+beat's `copy` into `twin/scape/brewing.json`. On commit, it finalizes and the
+beat becomes a permanent timeline item.
 
 ## Verification
 
-- `gc prime scribe` renders the writing rules into the scribe's prompt.
+- `gc prime scape-scribe` renders the writing rules into the scribe's prompt.
 - A real batch round-trips: events land → the scribe writes a beat sentence →
-  the next batch extends it → 30 min later it commits to `beats.json`.
-- `twin/timeline/beats.json` shows committed beats, each with a handoff-voice
+  the next batch extends it → 30 min later it commits to `twin/scape/beats.json`.
+- `twin/scape/beats.json` shows committed beats, each with a handoff-voice
   copy and the real events it summarises.

@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 BASE = os.environ.get("GC_SUPERVISOR", "http://127.0.0.1:8372")
 CITY = os.environ.get("GC_CITY", "home-city")
 COMMIT_WINDOW_MIN = 30          # a beat brews this long before committing
-STATE_PATH = "twin/timeline/brewing.json"
-BEATS_PATH = "twin/timeline/beats.json"
+STATE_PATH = "twin/scape/brewing.json"
+BEATS_PATH = "twin/scape/beats.json"
 # ------------------------------------------------------------------------
 
 def get(path, **params):
